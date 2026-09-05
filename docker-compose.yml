@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: app-backend
+    ports:
+      - "5050:5050"
+    environment:
+      - FLASK_HOST=0.0.0.0
+      - DB_HOST=db
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: always
+
+  db:
+    image: mysql:8.0
+    container_name: servidor-bd
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
+      MYSQL_DATABASE: ${DB_NAME}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+    restart: always
+
+  kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    ports:
+      - "3001:3001"
+    volumes:
+      - kuma_data:/app/data
+    networks:
+      - app-network
+    restart: always
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - app-network
+    restart: always
+
+volumes:
+  db_data:
+  kuma_data:
+
+networks:
+  app-network:
+    driver: bridge
